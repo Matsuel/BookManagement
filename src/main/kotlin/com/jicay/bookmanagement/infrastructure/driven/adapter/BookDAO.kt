@@ -13,7 +13,8 @@ class BookDAO(private val namedParameterJdbcTemplate: NamedParameterJdbcTemplate
             .query("SELECT * FROM BOOK", MapSqlParameterSource()) { rs, _ ->
                 Book(
                     name = rs.getString("title"),
-                    author = rs.getString("author")
+                    author = rs.getString("author"),
+                    reserved = rs.getBoolean("reserved")
                 )
             }
     }
@@ -24,5 +25,28 @@ class BookDAO(private val namedParameterJdbcTemplate: NamedParameterJdbcTemplate
                 "title" to book.name,
                 "author" to book.author
             ))
+    }
+
+    override fun getBook(name: String): Book? {
+        return namedParameterJdbcTemplate
+            .query(
+                "SELECT * FROM BOOK WHERE title = :title",
+                MapSqlParameterSource("title", name)
+            ) { rs, _ ->
+                Book(
+                    name = rs.getString("title"),
+                    author = rs.getString("author"),
+                    reserved = rs.getBoolean("reserved")
+                )
+            }
+            .firstOrNull()
+    }
+
+    override fun reserveBook(name: String) {
+        namedParameterJdbcTemplate
+            .update(
+                "UPDATE BOOK SET reserved = true WHERE title = :title",
+                MapSqlParameterSource("title", name)
+            )
     }
 }

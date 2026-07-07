@@ -69,6 +69,60 @@ class BookDAOIT(
                 this["id"].shouldNotBeNull().shouldBeInstanceOf<Int>()
                 this["title"].shouldBe("Les misérables")
                 this["author"].shouldBe("Victor Hugo")
+                this["reserved"].shouldBe(false)
+            }
+        }
+
+        test("get book by name") {
+            // GIVEN
+            performQuery(
+                // language=sql
+                """
+               insert into book (title, author, reserved)
+               values
+                   ('Hamlet', 'Shakespeare', true);
+            """.trimIndent()
+            )
+
+            // WHEN
+            val res = bookDAO.getBook("Hamlet")
+
+            // THEN
+            res.shouldBe(Book("Hamlet", "Shakespeare", reserved = true))
+        }
+
+        test("get book by name returns null when not found") {
+            // WHEN
+            val res = bookDAO.getBook("Unknown")
+
+            // THEN
+            res.shouldBe(null)
+        }
+
+        test("reserve book in db") {
+            // GIVEN
+            performQuery(
+                // language=sql
+                """
+               insert into book (title, author, reserved)
+               values
+                   ('Hamlet', 'Shakespeare', false);
+            """.trimIndent()
+            )
+
+            // WHEN
+            bookDAO.reserveBook("Hamlet")
+
+            // THEN
+            val res = performQuery(
+                // language=sql
+                "SELECT * from book where title = 'Hamlet'"
+            )
+
+            res shouldHaveSize 1
+            assertSoftly(res.first()) {
+                this["title"].shouldBe("Hamlet")
+                this["reserved"].shouldBe(true)
             }
         }
 

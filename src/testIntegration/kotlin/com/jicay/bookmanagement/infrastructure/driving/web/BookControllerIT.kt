@@ -1,6 +1,8 @@
 package com.jicay.bookmanagement.infrastructure.driving.web
 
 import com.jicay.bookmanagement.domain.model.Book
+import com.jicay.bookmanagement.domain.model.BookAlreadyReservedException
+import com.jicay.bookmanagement.domain.model.BookNotFoundException
 import com.jicay.bookmanagement.domain.usecase.BookUseCase
 import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.FunSpec
@@ -39,6 +41,32 @@ class BookControllerIT(
                           {
                             "name": "A",
                             "author": "B"
+                          }
+                        ]
+                        """.trimIndent()
+                    )
+                }
+            }
+    }
+
+    test("rest route get books exposes reservation availability") {
+        // GIVEN
+        every { bookUseCase.getAllBooks() } returns listOf(Book("A", "B", reserved = true))
+
+        // WHEN
+        mockMvc.get("/books")
+            //THEN
+            .andExpect {
+                status { isOk() }
+                content {
+                    json(
+                        // language=json
+                        """
+                        [
+                          {
+                            "name": "A",
+                            "author": "B",
+                            "reserved": true
                           }
                         ]
                         """.trimIndent()
@@ -90,5 +118,37 @@ class BookControllerIT(
         }
 
         verify(exactly = 0) { bookUseCase.addBook(any()) }
+    }
+
+    test("rest route reserve book returns 200") {
+        justRun { bookUseCase.reserveBook("Hamlet") }
+
+        mockMvc.post("/books/Hamlet/reserve") {
+            accept = APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+        }
+
+        verify(exactly = 1) { bookUseCase.reserveBook("Hamlet") }
+    }
+
+    test("rest route reserve book returns 409 when already reserved") {
+        every { bookUseCase.reserveBook("Hamlet") } throws BookAlreadyReservedException("Hamlet")
+
+        mockMvc.post("/books/Hamlet/reserve") {
+            accept = APPLICATION_JSON
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    test("rest route reserve book returns 404 when book does not exist") {
+        every { bookUseCase.reserveBook("Unknown") } throws BookNotFoundException("Unknown")
+
+        mockMvc.post("/books/Unknown/reserve") {
+            accept = APPLICATION_JSON
+        }.andExpect {
+            status { isNotFound() }
+        }
     }
 })

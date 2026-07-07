@@ -19,6 +19,15 @@ class InMemoryBookPort : BookPort {
         books.add(book)
     }
 
+    override fun getBook(name: String): Book? = books.firstOrNull { it.name == name }
+
+    override fun reserveBook(name: String) {
+        val index = books.indexOfFirst { it.name == name }
+        if (index >= 0) {
+            books[index] = books[index].copy(reserved = true)
+        }
+    }
+
     fun clear() {
         books.clear()
     }
